@@ -48,7 +48,7 @@ cleanup() {
         partx -d "$LOOPDEV" 2>/dev/null
         losetup -d "$LOOPDEV" 2>/dev/null
     fi
-	
+
     [ -d "$ROOTFS" ] && rmdir "$ROOTFS"
 }
 
@@ -117,12 +117,12 @@ PLATFORM="${PLATFORM%-PLATFORMFS*}"
 
 # Be absolutely certain the platform is supported before continuing
 case "$PLATFORM" in
-    bananapi|beaglebone|cubieboard2|cubietruck|odroid-c2|odroid-u2|rpi|rpi2|rpi3|rpi4|GCP|pinebookpro|pinephone|rock64|*-musl);;
+    bananapi|beaglebone|cubieboard2|cubietruck|odroid-c2|odroid-u2|rpi|rpi2|rpi3|rpi4|GCP|pinebookpro|pinephone|rock64|mntreform2|*-musl);;
     *) die "The $PLATFORM is not supported, exiting..."
 esac
 
 # Default for bigger boot partion on rk33xx devices since it needs to
-# fit at least 2 Kernels + initramfs
+# fit at least 2 Kernels + initramfs.
 case "$PLATFORM" in
     pinebookpro*|rock64*)
         : "${BOOT_FSSIZE:=256MiB}"
@@ -202,11 +202,22 @@ _EOF
                 ;;
             *)
                 # The rest use MBR and need less space reserved
+                case "${PLATFORM}" in
+                    mntreform2*)
+                        # MNT Reform 2 needs space reserved for U-Boot first
+                        BOOT_OFFSET=8192
+                        ;;
+                    *)
+                        BOOT_OFFSET=2048
+                        ;;
+                esac
                 sfdisk "${FILENAME}" <<_EOF
 label: dos
-2048,${BOOT_FSSIZE},b,*
-,+,L
+${BOOT_OFFSET},${BOOT_FSSIZE},b,*
++${BOOT_OFFSET},,L
 _EOF
+#               sfdisk -a "${FILENAME}" <<_EOF
+#_EOF
                 ;;
         esac
         LOOPDEV=$(losetup --show --find --partscan "$FILENAME")
@@ -301,6 +312,11 @@ odroid-u2*)
 ci20*)
     dd if="${ROOTFS}/boot/u-boot-spl.bin" of="${LOOPDEV}" obs=512 seek=1 >/dev/null 2>&1
     dd if="${ROOTFS}/boot/u-boot.img" of="${LOOPDEV}" obs=1K seek=14 >/dev/null 2>&1
+    ;;
+mntreform2*)
+    dd if="${ROOTFS}/usr/lib/mntreform2-uboot/u-boot.bin" of="${LOOPDEV}" bs=1k conv=notrunc seek=33 >/dev/null 2>&1
+    run_cmd_chroot "${ROOTFS}" "xbps-reconfigure -f mntreform2-kernel"
+    cleanup_chroot
     ;;
 rock64*)
     rk33xx_flash_uboot "${ROOTFS}/usr/lib/rock64-uboot" "$LOOPDEV"
