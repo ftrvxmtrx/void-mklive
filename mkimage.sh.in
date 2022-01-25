@@ -117,14 +117,14 @@ PLATFORM="${PLATFORM%-PLATFORMFS*}"
 
 # Be absolutely certain the platform is supported before continuing
 case "$PLATFORM" in
-    bananapi|beaglebone|cubieboard2|cubietruck|odroid-c2|odroid-u2|rpi|rpi2|rpi3|rpi4|GCP|pinebookpro|pinephone|rock64|mntreform2|*-musl);;
+    bananapi|beaglebone|cubieboard2|cubietruck|mntreform2|odroid-c2|odroid-u2|rpi|rpi2|rpi3|rpi4|GCP|pinebookpro|pinephone|rock64|*-musl);;
     *) die "The $PLATFORM is not supported, exiting..."
 esac
 
-# Default for bigger boot partion on rk33xx devices since it needs to
-# fit at least 2 Kernels + initramfs.
+# Default for bigger boot partion on rk33xx and mnt reform 2 devices
+# since they need to fit at least 2 Kernels + initramfs.
 case "$PLATFORM" in
-    pinebookpro*|rock64*)
+    mntreform2*|pinebookpro*|rock64*)
         : "${BOOT_FSSIZE:=256MiB}"
         ;;
 esac
